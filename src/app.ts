@@ -1,6 +1,8 @@
 /* eslint-disable new-cap */
 import koa from 'koa'
 
+import { IS_DEV } from './constant/env'
+
 const app = new koa()
 
 app.use(async (ctx) => {
@@ -9,6 +11,7 @@ app.use(async (ctx) => {
 
 app.listen(5000, () => {
   console.log('server is running at 5000')
+  console.log(IS_DEV)
 })
 
 export default app
