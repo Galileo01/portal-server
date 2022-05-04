@@ -1,17 +1,18 @@
 import Koa from 'koa'
+
 import logger from './logger'
 
 // 请求日志 中间件
 export const requestLoggerMid = async (ctx: Koa.Context, next: Koa.Next) => {
-  const { url, header, method } = ctx
+  const { url, header, method, state } = ctx
   const { origin } = header
   const before = new Date().getTime()
   await next()
   const after = new Date().getTime()
   logger.info(
-    `${method} URL:${url} STATUS:${ctx.response.status} ORIGIN:${origin} TIME:${
-      after - before
-    }ms`
+    `USER_ID: ${state.user?.userId} METHOD:${method} URL:${url} STATUS:${
+      ctx.response.status
+    } ORIGIN:${origin} COST_TIME:${after - before}ms`
   )
 }
 
