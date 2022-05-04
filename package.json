@@ -4,24 +4,34 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon  -e  ts  --exec ts-node  ./app.ts",
-    "start": "ts-node app.ts",
-    "server": "pm2 start dist/app.js --name portal-server",
-    "prepare": "husky install"
+    "dev": "NODE_ENV=development nodemon  -e  ts  --exec ts-node  src/app.ts",
+    "start": "ts-node src/app.ts",
+    "server": "tsc & pm2 start dist/app.js --name portal-server",
+    "prepare": "husky install",
+    "push-remote": "bash push.sh"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@koa/router": "^10.1.1",
+    "jsonwebtoken": "^8.5.1",
+    "knex": "^2.0.0",
     "koa": "^2.13.4",
-    "koa-bodyparser": "^4.3.0"
+    "koa-bodyparser": "^4.3.0",
+    "koa-jwt": "^4.0.3",
+    "log4js": "^6.4.6",
+    "module-alias": "^2.2.2",
+    "mysql": "^2.18.1",
+    "nanoid": "^3.3.4"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^16.2.4",
+    "@types/jsonwebtoken": "^8.5.8",
     "@types/koa": "^2.13.4",
     "@types/koa-bodyparser": "^4.3.7",
     "@types/koa__router": "^8.0.11",
+    "@types/mysql": "^2.15.21",
     "@typescript-eslint/eslint-plugin": "^5.21.0",
     "@typescript-eslint/parser": "^5.21.0",
     "commitlint": "^16.2.4",
@@ -35,5 +45,8 @@
     "lint-staged": "^12.4.1",
     "prettier": "^2.6.2",
     "typescript": "^4.6.4"
+  },
+  "_moduleAliases": {
+    "@": "src"
   }
 }
