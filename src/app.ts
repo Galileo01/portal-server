@@ -17,15 +17,15 @@ app.use(bodyParser())
 // 添加错误处理中间件
 app.use(errMid)
 
-// 添加 日志 中间件
-app.use(requestLoggerMid)
-
 // 添加 token 验证 中间件
 app.use(
   koaJwt({ secret: TOKEN_SECRET }).unless({
     path: JWT_IGNORE_PATH,
   })
 )
+
+// 添加 日志 中间件
+app.use(requestLoggerMid)
 
 // 添加业务 路由
 app.use(router.routes()).use(router.allowedMethods())
