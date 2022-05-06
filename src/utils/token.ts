@@ -8,7 +8,7 @@ export const signTokenByUserId = (userId: string) =>
       userId,
     },
     TOKEN_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '7 days' }
   )
 
 export const verifyToken = (token: string) => jwt.verify(token, TOKEN_SECRET)

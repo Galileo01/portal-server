@@ -1,4 +1,4 @@
-import { ResourceType } from '@/typings/common/resource'
+import { ResourceType } from '@/typings/database/resource'
 
 export type GetByIdQuery = {
   resourceId: string

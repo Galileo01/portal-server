@@ -2,7 +2,7 @@ import log4js from 'log4js'
 
 import { IS_DEV } from '../constant'
 
-const logFile = IS_DEV ? './logs_dev/info.log' : './logs/info.log'
+const logFile = IS_DEV ? './logs_dev/server.log' : './logs/server.log'
 
 log4js.configure({
   appenders: {

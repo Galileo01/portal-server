@@ -1,6 +1,6 @@
 import Router from '@koa/router'
 
-import { Resource, ResourceList } from '@/typings/common/resource'
+import { Resource, ResourceList } from '@/typings/database'
 import {
   GetByIdQuery,
   GetResourceListQuery,
