@@ -1,6 +1,6 @@
 import Router from '@koa/router'
 
-import { UserInfo } from '@/typings/common/user'
+import { User } from '@/typings/database'
 import { UserLoginData } from '@/typings/request/user'
 import { UserInCtxState } from '@/typings/koa/context'
 import knex from '@/utils/kenx'
@@ -18,7 +18,7 @@ router.post('/login', async (ctx) => {
 
   const postData = ctx.request.body
   const { name, password } = postData as UserLoginData
-  const users = await knex.select().from<UserInfo>('user').where({ name })
+  const users = await knex.select().from<User>('user').where({ name })
 
   // // 若没有找到对应名称的用户 则 新建用户 -注册
   if (users.length === 0) {
@@ -32,7 +32,7 @@ router.post('/login', async (ctx) => {
     // 下发token
     success = 1
     data = {
-      userInfo: users,
+      User: users,
       token: signTokenByUserId(userId),
       isRegister: 1, // 标识 是 注册行为
     }
@@ -42,7 +42,7 @@ router.post('/login', async (ctx) => {
     // 下发token
     success = 1
     data = {
-      userInfo: users,
+      User: users,
       token: signTokenByUserId(users[0].userId),
     }
   }
@@ -64,7 +64,7 @@ router.get('/getInfo', async (ctx) => {
   const { userId } = ctx.state.user as UserInCtxState
   const users = await knex
     .select('userId', 'name', 'avatar')
-    .from<UserInfo>('user')
+    .from<User>('user')
     .where({
       userId,
     })
@@ -72,7 +72,7 @@ router.get('/getInfo', async (ctx) => {
   ctx.body = {
     success: users.length,
     data: {
-      userInfo: users[0],
+      User: users[0],
     },
   }
 })
