@@ -5,9 +5,10 @@ import bodyParser from 'koa-bodyparser'
 import koaJwt from 'koa-jwt'
 import koaStatic from 'koa-static'
 
-import './moduleAlias' // 引入路径别名 模块
+import './moduleAlias' // 引入路径别名 模块 ，在自定义模块之间引入
 import { requestLoggerMid, errMid } from './utils/middleWares'
 import { TOKEN_SECRET, JWT_IGNORE_PATH } from './config'
+import logger from './utils/logger'
 
 import router from './router'
 
@@ -36,5 +37,5 @@ app.use(
 app.use(router.routes()).use(router.allowedMethods())
 
 app.listen(5000, () => {
-  console.log('server start running at 5000')
+  logger.info('server start running at 5000')
 })
