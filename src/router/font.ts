@@ -10,7 +10,7 @@ const router = new Router({
 // add  暂时 不写
 
 router.get('/getList', async (ctx) => {
-  const fontList = await knex.select().from<FontFamily>('font')
+  const fontList = await knex.select().from<FontFamily>('font').orderBy('name')
 
   ctx.body = {
     success: fontList.length > 0 ? 1 : 0,

@@ -4,7 +4,7 @@ import { Resource, ResourceList } from '@/typings/database'
 import {
   GetByIdQuery,
   GetResourceListQuery,
-  PublishResourceData,
+  OperateResourceData,
   DeleteByIdData,
 } from '@/typings/request/resource'
 import { UserInCtxState } from '@/typings/koa/context'
@@ -132,11 +132,11 @@ router.get('/getList', async (ctx) => {
 })
 
 // 发布 + 更新
-router.post('/publish', async (ctx) => {
+router.post('/operate', async (ctx) => {
   let success = 0
   let data: unknown = {}
 
-  const { operateType, resourceData } = ctx.request.body as PublishResourceData
+  const { operateType, resourceData } = ctx.request.body as OperateResourceData
   const { resourceType, resourceId, ...otherColumns } = resourceData
 
   //  发布
@@ -169,11 +169,12 @@ router.post('/deleteById', async (ctx) => {
   const { resourceId, resourceType = 'page' } = ctx.request
     .body as DeleteByIdData
 
+  const { userId } = ctx.state.user as UserInCtxState
+
   const affectedRow = await knex(resourceType).del().where({
     resourceId,
+    ownerId: userId, // 只能删除当前用户自己的
   })
-
-  // TODO: 所有者控制   不是作者禁止 删除 并报错
 
   ctx.body = {
     success: affectedRow,

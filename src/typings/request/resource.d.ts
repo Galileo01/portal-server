@@ -13,7 +13,7 @@ export type GetResourceListQuery = {
   filter?: 'all' | 'private' | 'public' | 'platform'
 }
 
-export type PublishResourceData = {
+export type OperateResourceData = {
   operateType: 'publish' | 'update'
   // 资源 数据
   resourceData: {
