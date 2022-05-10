@@ -28,9 +28,7 @@ router.get('/output', async (ctx) => {
   if (pages.length === 0) {
     ctx.body = {
       success: 0,
-      data: {
-        message: 'pageId dont`t existed',
-      },
+      data: 'pageId dont`t existed',
     }
     return
   }

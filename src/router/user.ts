@@ -14,7 +14,7 @@ const router = new Router({
 // 登陆 / 用户名不存在则自动 注册
 router.post('/login', async (ctx) => {
   let success = 0
-  let data: Record<string, unknown> = {}
+  let data: unknown = {}
 
   const postData = ctx.request.body
   const { name, password } = postData as UserLoginData
@@ -32,7 +32,10 @@ router.post('/login', async (ctx) => {
     // 下发token
     success = 1
     data = {
-      User: users,
+      user: {
+        userId,
+        name,
+      },
       token: signTokenByUserId(userId),
       isRegister: 1, // 标识 是 注册行为
     }
@@ -42,15 +45,17 @@ router.post('/login', async (ctx) => {
     // 下发token
     success = 1
     data = {
-      User: users,
+      user: {
+        ...users[0],
+        password: undefined, // 不下发 password
+      },
       token: signTokenByUserId(users[0].userId),
+      isRegister: 0,
     }
   }
   // 密码不正确
   else {
-    data = {
-      message: '用户名或密码错误',
-    }
+    data = '用户名或密码错误'
   }
 
   ctx.body = {
@@ -59,11 +64,13 @@ router.post('/login', async (ctx) => {
   }
 })
 
+const userBaseColumns = ['userId', 'name', 'avatar']
+
 // 根据 token 获取用户信息
 router.get('/getInfo', async (ctx) => {
   const { userId } = ctx.state.user as UserInCtxState
   const users = await knex
-    .select('userId', 'name', 'avatar')
+    .select(...userBaseColumns)
     .from<User>('user')
     .where({
       userId,
@@ -71,9 +78,7 @@ router.get('/getInfo', async (ctx) => {
 
   ctx.body = {
     success: users.length,
-    data: {
-      User: users[0],
-    },
+    data: users[0],
   }
 })
 
@@ -86,8 +91,16 @@ router.post('/updateInfo', async (ctx) => {
     userId,
   })
 
+  const users = await knex
+    .select(...userBaseColumns)
+    .from<User>('user')
+    .where({
+      userId,
+    })
+
   ctx.body = {
     success: affectRows === 1 ? 1 : 0,
+    data: users[0],
   }
 })
 

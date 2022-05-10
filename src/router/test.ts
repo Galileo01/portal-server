@@ -5,11 +5,12 @@ const router = new Router({
 })
 
 router.get('/ping', async (ctx) => {
-  const { params } = ctx.query
-
   ctx.body = {
-    test: params,
-    timeStamp: new Date().getTime(),
+    success: 1,
+    data: {
+      test: ctx.query,
+      timeStamp: new Date().getTime(),
+    },
   }
 })
 
