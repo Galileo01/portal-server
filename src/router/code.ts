@@ -17,30 +17,44 @@ const tempResourceDataJsonPath = `${basePath}/temp-resource-data.json`
 const outputCodeScriptPath = 'src/script/output-code.mjs'
 
 // 出码能力
-router.get('/output', async (ctx) => {
-  const { pageId, type = 'src_code' } = ctx.query as CodeOutputQuery
-  const before = new Date().getTime()
-  const pages = await knex
-    .select()
-    .from<Resource>('page')
-    .where({ resourceId: pageId })
+// FIXME: 添加新页面 的处理逻辑，改为POST方法，接受配置字符串
+// TODO:设置 自动任务 自动删除zip文件
+router.post('/output', async (ctx) => {
+  const {
+    pageId,
+    type = 'src_code',
+    pageConfig,
+  } = ctx.request.body as CodeOutputQuery
 
-  if (pages.length === 0) {
-    ctx.body = {
-      success: 0,
-      data: 'pageId dont`t existed',
+  let resourceData = pageConfig
+
+  // 如果 pageConfig 字段为空则从数据库查询
+  if (!resourceData) {
+    const pages = await knex
+      .select()
+      .from<Resource>('page')
+      .where({ resourceId: pageId })
+
+    if (pages.length === 0) {
+      ctx.body = {
+        success: 0,
+        data: 'pageId dont`t existed',
+      }
+      return
     }
-    return
+    resourceData = JSON.stringify(pages[0])
   }
+
+  const before = new Date().getTime()
 
   // 保证 目录存在 ,不存在则创建
   await fs.ensureDir(basePath)
 
   // 写入 json配置 文件
-  await fs.writeJSON(tempResourceDataJsonPath, pages[0])
+  fs.writeFileSync(tempResourceDataJsonPath, resourceData)
 
   const cmd = `${outputCodeScriptPath} --pageId ${pageId} --type ${type} --env ${
-    IS_DEV ? 'prod' : 'prod'
+    IS_DEV ? 'dev' : 'prod'
   }`
   logger.debug('outputCodeScript cmd', cmd)
 
