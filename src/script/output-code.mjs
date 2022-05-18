@@ -46,7 +46,6 @@ else {
 cd(pwd)
 
 // 删除 临时文件
-if (env === 'prod') {
-  await $`rm -r -f ${codeDir}`
-  await $`rm  ${resourceDataFile}`
-}
+
+await $`rm -r -f ${codeDir}`
+await $`rm  ${resourceDataFile}`
