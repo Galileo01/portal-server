@@ -11,6 +11,8 @@ export type GetResourceListQuery = {
   offset?: number
   // template 过滤条件
   filter?: 'all' | 'private' | 'public' | 'platform'
+  titleLike?: string
+  order?: 'lastModified' | 'title'
 }
 
 export type OperateResourceData = {
