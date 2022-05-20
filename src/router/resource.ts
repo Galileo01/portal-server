@@ -7,7 +7,7 @@ import {
   OperateResourceData,
   DeleteByIdData,
 } from '@/typings/request/resource'
-import { UserInCtxState } from '@/typings/koa/context'
+import { UserInCtxState } from '@/typings/common/koa-context'
 import knex from '@/utils/kenx'
 import { verifyTokenFromAuthorization } from '@/utils/token'
 import logger from '@/utils/logger'

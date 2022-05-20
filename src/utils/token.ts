@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken'
 
 import { TOKEN_SECRET } from '@/config'
-import { UserInCtxState } from '@/typings/koa/context'
+import { UserInCtxState } from '@/typings/common/koa-context'
 import logger from './logger'
 
 export const signTokenByUserId = (userId: string) =>

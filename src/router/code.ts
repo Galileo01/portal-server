@@ -3,10 +3,11 @@ import fs from 'fs-extra'
 import child_process from 'child_process'
 
 import { IS_DEV } from '@/constant/env'
-import { Resource } from '@/typings/database'
-import { CodeOutputData } from '@/typings/request/code'
+import { Resource, FontFamily } from '@/typings/database'
+import { CodeOutputData, NeededPageConfig } from '@/typings/request/code'
 import knex from '@/utils/kenx'
 import logger from '@/utils/logger'
+import { safeJsonParse } from '@/utils'
 
 const router = new Router({
   prefix: '/code',
@@ -17,8 +18,6 @@ const tempResourceDataJsonPath = `${basePath}/temp-resource-data.json`
 const outputCodeScriptPath = 'src/script/output-code.mjs'
 
 // 出码能力
-// FIXME: 添加新页面 的处理逻辑，改为POST方法，接受配置字符串
-// TODO:设置 自动任务 自动删除zip文件
 router.post('/output', async (ctx) => {
   const {
     pageId,
@@ -26,10 +25,14 @@ router.post('/output', async (ctx) => {
     pageConfig,
   } = ctx.request.body as CodeOutputData
 
-  let resourceData = pageConfig
+  const before = new Date().getTime()
+
+  let configData
 
   // 如果 pageConfig 字段为空则从数据库查询
-  if (!resourceData) {
+  if (pageConfig) {
+    configData = safeJsonParse<NeededPageConfig>(pageConfig)
+  } else {
     const pages = await knex
       .select()
       .from<Resource>('page')
@@ -42,16 +45,36 @@ router.post('/output', async (ctx) => {
       }
       return
     }
-    resourceData = JSON.stringify(pages[0])
+    configData = safeJsonParse<NeededPageConfig>(pages[0].config)
   }
+  const { fontConfig } = configData?.globalConfig || {}
 
-  const before = new Date().getTime()
+  // 替换 字体配置为直接可恢复的 格式
+  if (fontConfig) {
+    // 获取全量的字体列表
+    const fontList = await knex
+      .select()
+      .from<FontFamily>('font')
+      .orderBy('name')
+
+    const usedFontName = fontConfig.usedFont?.map((item) => item[1]) || []
+    const usedFont = fontList.filter(
+      (font) => font.src && usedFontName.includes(font.name)
+    )
+    // 替换 globalFont
+    // @ts-ignore
+    // eslint-disable-next-line prefer-destructuring
+    configData?.globalConfig?.fontConfig.globalFont = fontConfig.globalFont[1]
+    // 替换 usedFont
+    // @ts-ignore
+    configData?.globalConfig?.fontConfig?.usedFont = usedFont
+  }
 
   // 保证 目录存在 ,不存在则创建
   await fs.ensureDir(basePath)
 
   // 写入 json配置 文件
-  fs.writeFileSync(tempResourceDataJsonPath, resourceData)
+  fs.writeJsonSync(tempResourceDataJsonPath, configData)
 
   const cmd = `${outputCodeScriptPath} --pageId ${pageId} --type ${type} --env ${
     IS_DEV ? 'dev' : 'prod'

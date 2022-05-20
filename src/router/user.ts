@@ -2,7 +2,7 @@ import Router from '@koa/router'
 
 import { User } from '@/typings/database'
 import { UserLoginData } from '@/typings/request/user'
-import { UserInCtxState } from '@/typings/koa/context'
+import { UserInCtxState } from '@/typings/common/koa-context'
 import knex from '@/utils/kenx'
 import { getUniqueId } from '@/utils'
 import { signTokenByUserId } from '@/utils/token'

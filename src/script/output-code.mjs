@@ -47,5 +47,5 @@ cd(pwd)
 
 // 删除 临时文件
 
-await $`rm -r -f ${codeDir}`
-await $`rm  ${resourceDataFile}`
+// await $`rm -r -f ${codeDir}`
+// await $`rm  ${resourceDataFile}`
