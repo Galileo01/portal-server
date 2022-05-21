@@ -4,13 +4,14 @@ import { Resource, ResourceList } from '@/typings/database'
 import {
   GetByIdQuery,
   GetResourceListQuery,
-  PublishResourceData,
+  OperateResourceData,
   DeleteByIdData,
 } from '@/typings/request/resource'
-import { UserInCtxState } from '@/typings/koa/context'
+import { UserInCtxState } from '@/typings/common/koa-context'
 import knex from '@/utils/kenx'
-import { verifyToken } from '@/utils/token'
+import { verifyTokenFromAuthorization } from '@/utils/token'
 import logger from '@/utils/logger'
+import { isNumber } from '@/utils/assert'
 
 const router = new Router({
   prefix: '/resource',
@@ -25,9 +26,7 @@ router.get('/getById', async (ctx) => {
 
   ctx.body = {
     success: resources.length,
-    data: {
-      resources: resources[0],
-    },
+    data: resources[0],
   }
 })
 
@@ -37,61 +36,110 @@ router.get('/getById', async (ctx) => {
  * 2. 未登录
  */
 
-const pageBaseColumns = ['resourceId', 'title', 'ownerId', 'thumbnailUrl']
-const templateBaseCOlumns = [...pageBaseColumns, 'type', 'private']
+const pageBaseColumns = [
+  'resourceId',
+  'lastModified',
+  'title',
+  'ownerId',
+  'thumbnailUrl',
+]
+const templateBaseColumns = [...pageBaseColumns, 'type', 'private']
 
 router.get('/getList', async (ctx) => {
-  const { resourceType = 'page' } = ctx.query as GetResourceListQuery
+  const {
+    resourceType = 'page',
+    offset,
+    limit,
+    filter = 'all',
+    titleLike,
+    order = 'lastModified',
+  } = ctx.query as GetResourceListQuery
 
-  const resourceList: ResourceList = []
+  const existCountQuery = isNumber(offset) && isNumber(limit) // 存在分页条件
+
+  // 是否包含 用户自己创建的
+  const includesOwn =
+    resourceType === 'page' || filter === 'all' || filter === 'private'
+
+  const userId =
+    ctx.header?.authorization &&
+    verifyTokenFromAuthorization(ctx.header?.authorization)
+
+  logger.debug('ctx.query ,tokenUserId', ctx.query, userId)
+
+  let allResourceList: ResourceList = []
 
   // 由于 路由在jwt 的 忽略列表 中，需要手动解析 该用户的token
-  if (ctx.header?.authorization) {
-    try {
-      const { userId } = verifyToken(
-        ctx.header?.authorization?.slice(7) || ''
-      ) as {
-        userId: string
-      }
-      const condition = { ownerId: userId }
-      const neededColumns =
-        resourceType === 'page' ? pageBaseColumns : templateBaseCOlumns
-      const userResourceList = await knex
-        .select(...neededColumns)
-        .from<Resource>(resourceType)
-        .where(condition)
-        .orderBy('lastModified', 'desc') // 按照时间戳降序排列
-      resourceList.push(...userResourceList)
-    } catch (err) {
-      logger.error(`ERROR : ${err}`)
-    }
+  if (includesOwn && userId) {
+    const condition = { ownerId: userId }
+
+    const neededColumns =
+      resourceType === 'page' ? pageBaseColumns : templateBaseColumns
+    const userResourceList = await knex
+      .select(...neededColumns)
+      .from<Resource>(resourceType)
+      .where(condition)
+    allResourceList.push(...userResourceList)
+    logger.debug('userResourceList', userResourceList.length)
   }
 
   // 若是 获取 模板 则需要 再获取 获取共享的 模板
   if (resourceType === 'template') {
-    const condition = { private: 0 }
-    const templates = await knex
-      .select(...templateBaseCOlumns)
-      .from<Resource>('template')
-      .where(condition)
-      .orderBy('lastModified', 'desc') // 按照时间戳降序排列
-    resourceList.push(...templates)
+    let condition: Record<string, unknown> | null = null
+
+    if (filter === 'all') {
+      condition = { private: 0 }
+    } else if (filter === 'public') {
+      condition = { private: 0 }
+    } else if (filter === 'platform') {
+      condition = { type: 'platform' }
+    }
+
+    if (condition) {
+      const baseBuilder = knex.from<Resource>('template').where(condition)
+
+      // titleLike 存在添加模糊查询
+      if (titleLike) {
+        baseBuilder.whereLike('title', `%${titleLike}%`)
+      }
+
+      const templates = await baseBuilder.select(...templateBaseColumns)
+
+      allResourceList.push(...templates)
+      logger.debug('filter templates', templates.length)
+    }
   }
 
+  // 统一 过滤重复
+  allResourceList = allResourceList.reduce((preList, curItem) => {
+    const include = preList.find(
+      (item) => item.resourceId === curItem.resourceId
+    )
+    return include ? preList : preList.concat(curItem)
+  }, [] as ResourceList)
+
+  // 统一排序
+  allResourceList.sort((pre, cur) => (pre[order] < cur[order] ? -1 : 1))
+
+  const responseResourceList = existCountQuery
+    ? allResourceList.slice(offset, offset + limit + 1)
+    : allResourceList
+
   ctx.body = {
-    success: 0,
+    success: 1,
     data: {
-      resourceList,
+      resourceList: responseResourceList,
+      hasMore: allResourceList.length > responseResourceList.length ? 1 : 0,
     },
   }
 })
 
 // 发布 + 更新
-router.post('/publish', async (ctx) => {
+router.post('/operate', async (ctx) => {
   let success = 0
-  let data: Record<string, unknown> = {}
+  let data: unknown = {}
 
-  const { operateType, resourceData } = ctx.request.body as PublishResourceData
+  const { operateType, resourceData } = ctx.request.body as OperateResourceData
   const { resourceType, resourceId, ...otherColumns } = resourceData
 
   //  发布
@@ -109,9 +157,7 @@ router.post('/publish', async (ctx) => {
       .where({ resourceId })
     success = affectedRow
     if (affectedRow === 0) {
-      data = {
-        message: 'resourceId 错误',
-      }
+      data = 'resourceId 错误'
     }
   }
 
@@ -125,15 +171,17 @@ router.post('/publish', async (ctx) => {
 router.post('/deleteById', async (ctx) => {
   const { resourceId, resourceType = 'page' } = ctx.request
     .body as DeleteByIdData
+
+  const { userId } = ctx.state.user as UserInCtxState
+
   const affectedRow = await knex(resourceType).del().where({
     resourceId,
+    ownerId: userId, // 只能删除当前用户自己的
   })
 
   ctx.body = {
     success: affectedRow,
-    data: {
-      message: affectedRow === 0 ? 'resourceId 错误' : undefined,
-    },
+    data: affectedRow === 0 ? 'resourceId 错误' : undefined,
   }
 })
 

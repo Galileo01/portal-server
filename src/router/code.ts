@@ -3,71 +3,99 @@ import fs from 'fs-extra'
 import child_process from 'child_process'
 
 import { IS_DEV } from '@/constant/env'
-import { Resource } from '@/typings/database'
-import { CodeOutputQuery } from '@/typings/request/code'
+import { Resource, FontFamily } from '@/typings/database'
+import { CodeOutputData, NeededPageConfig } from '@/typings/request/code'
 import knex from '@/utils/kenx'
 import logger from '@/utils/logger'
+import { safeJsonParse } from '@/utils'
 
 const router = new Router({
   prefix: '/code',
 })
 
 const basePath = 'public/output_code'
-const tempResourceDataJsonPath = `${basePath}/temp-resource-data.json`
+const tempConfigDataJsonPath = `${basePath}/temp-config-data.json`
 const outputCodeScriptPath = 'src/script/output-code.mjs'
 
 // 出码能力
-router.get('/output', async (ctx) => {
-  const { pageId, type = 'src_code' } = ctx.query as CodeOutputQuery
-  const before = new Date().getTime()
-  const pages = await knex
-    .select()
-    .from<Resource>('page')
-    .where({ resourceId: pageId })
+router.post('/output', async (ctx) => {
+  const {
+    pageId,
+    type = 'src_code',
+    pageConfig,
+  } = ctx.request.body as CodeOutputData
 
-  if (pages.length === 0) {
-    ctx.body = {
-      success: 0,
-      data: {
-        message: 'pageId dont`t existed',
-      },
+  const before = new Date().getTime()
+
+  let configData
+
+  // 如果 pageConfig 字段为空则从数据库查询
+  if (pageConfig) {
+    configData = safeJsonParse<NeededPageConfig>(pageConfig)
+  } else {
+    const pages = await knex
+      .select()
+      .from<Resource>('page')
+      .where({ resourceId: pageId })
+
+    if (pages.length === 0) {
+      ctx.body = {
+        success: 0,
+        data: 'pageId dont`t existed',
+      }
+      return
     }
-    return
+    configData = safeJsonParse<NeededPageConfig>(pages[0].config)
+  }
+  const { fontConfig } = configData?.globalConfig || {}
+
+  // 替换 字体配置为直接可恢复的 格式
+  if (fontConfig) {
+    // 获取全量的字体列表
+    const fontList = await knex
+      .select()
+      .from<FontFamily>('font')
+      .orderBy('name')
+
+    const usedFontName = fontConfig.usedFont?.map((item) => item[1]) || []
+    const usedFont = fontList.filter(
+      (font) => font.src && usedFontName.includes(font.name)
+    )
+    // 替换 globalFont
+    // @ts-ignore
+    // eslint-disable-next-line prefer-destructuring
+    configData?.globalConfig?.fontConfig.globalFont = fontConfig.globalFont[1]
+    // 替换 usedFont
+    // @ts-ignore
+    configData?.globalConfig?.fontConfig?.usedFont = usedFont
   }
 
   // 保证 目录存在 ,不存在则创建
   await fs.ensureDir(basePath)
 
   // 写入 json配置 文件
-  await fs.writeJSON(tempResourceDataJsonPath, pages[0])
+  fs.writeJsonSync(tempConfigDataJsonPath, configData)
 
   const cmd = `${outputCodeScriptPath} --pageId ${pageId} --type ${type} --env ${
-    IS_DEV ? 'prod' : 'prod'
+    IS_DEV ? 'dev' : 'prod'
   }`
+
   logger.debug('outputCodeScript cmd', cmd)
 
   // 同步执行 打包脚本 NOTE: 等待 打包真正完成 在返回数据
   await child_process.execSync(cmd)
 
   const after = new Date().getTime()
+  const costTime = after - before
   ctx.body = {
     success: 1,
     data: {
-      zipPath: `/output_code/${pageId}.zip`,
-      costTime: after - before,
+      zipName: `${pageId}.zip`,
+      costTime,
     },
   }
-})
 
-// 前端 监听zip 下载进度 下载完成 通知server 删除压缩包
-router.post('/download_finish', async (ctx) => {
-  const { pageId } = ctx.request.body as { pageId: string }
-  // 删除 对应的 压缩包
-  await fs.remove(`${basePath}/${pageId}.zip`)
-
-  ctx.body = {
-    success: 1,
-  }
+  logger.debug('output costTime', costTime)
 })
 
 export default router

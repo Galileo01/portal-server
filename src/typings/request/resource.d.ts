@@ -7,9 +7,15 @@ export type GetByIdQuery = {
 
 export type GetResourceListQuery = {
   resourceType?: ResourceType
+  limit?: number
+  offset?: number
+  // template 过滤条件
+  filter?: 'all' | 'private' | 'public' | 'platform'
+  titleLike?: string
+  order?: 'lastModified' | 'title'
 }
 
-export type PublishResourceData = {
+export type OperateResourceData = {
   operateType: 'publish' | 'update'
   // 资源 数据
   resourceData: {

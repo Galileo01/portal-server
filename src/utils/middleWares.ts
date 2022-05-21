@@ -25,7 +25,6 @@ export const errMid = async (ctx: Koa.Context, next: Koa.Next) => {
     ctx.response.status = 500 // 状态码强制设置为 500
     ctx.body = {
       success: 0,
-      errCode: 500,
       data: `${err}`,
     }
   }

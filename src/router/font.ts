@@ -3,8 +3,6 @@ import Router from '@koa/router'
 import knex from '@/utils/kenx'
 import { FontFamily } from '@/typings/database'
 
-// TODO: 完善 font 路由
-
 const router = new Router({
   prefix: '/font',
 })
@@ -12,13 +10,11 @@ const router = new Router({
 // add  暂时 不写
 
 router.get('/getList', async (ctx) => {
-  const fontList = await knex.select().from<FontFamily>('font')
+  const fontList = await knex.select().from<FontFamily>('font').orderBy('name')
 
   ctx.body = {
     success: fontList.length > 0 ? 1 : 0,
-    data: {
-      fontList,
-    },
+    data: fontList,
   }
 })
 

@@ -4,8 +4,12 @@ import koa from 'koa'
 import bodyParser from 'koa-bodyparser'
 import koaJwt from 'koa-jwt'
 import koaStatic from 'koa-static'
+import cors from 'koa2-cors'
 
 import './moduleAlias' // 引入路径别名 模块 ，在自定义模块之间引入
+import './schedule'
+import { IS_DEV } from './constant/env'
+import { REMOTE_HOST } from './constant'
 import { requestLoggerMid, errMid } from './utils/middleWares'
 import { TOKEN_SECRET, JWT_IGNORE_PATH } from './config'
 import logger from './utils/logger'
@@ -16,6 +20,14 @@ const app = new koa()
 
 // 添加 日志 中间件
 app.use(requestLoggerMid)
+
+// 添加跨域中间件
+app.use(
+  cors({
+    origin: IS_DEV ? '*' : `https://${REMOTE_HOST}:3000`,
+    maxAge: 5,
+  })
+)
 
 // 添加错误处理中间件
 app.use(errMid)
