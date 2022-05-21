@@ -10,9 +10,9 @@ const repositoryGitLink =
 const pwd = (await $`pwd`).stdout.trim() // stdout 末尾存在 ’\n‘ 换行符
 
 // 配置文件
-const resourceDataFile = `${baseDir}/temp-resource-data.json`
+const resourceDataFile = `${baseDir}/temp-config-data.json`
 
-const targetResourceDataFileName = 'resource-data.json'
+const targetResourceDataFileName = 'config-data.json'
 
 // 从全局变量命令行 解析 参数
 const { pageId, type = 'src_code', env = 'prod' } = global.argv
@@ -20,9 +20,7 @@ const { pageId, type = 'src_code', env = 'prod' } = global.argv
 const codeDir = `${baseDir}/${pageId}`
 
 // 拉取 github 代码模板
-// await $`git clone ${repositoryGitLink} ${codeDir}`
-// 测试 环境 从开发分支 拉取
-await $`git clone -b template-frame ${repositoryGitLink} ${codeDir}`
+await $`git clone ${repositoryGitLink} ${codeDir}`
 
 // 复制 json 配置文件
 await $`cp ${resourceDataFile} ${codeDir}/src/${targetResourceDataFileName}`

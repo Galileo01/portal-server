@@ -14,7 +14,7 @@ const router = new Router({
 })
 
 const basePath = 'public/output_code'
-const tempResourceDataJsonPath = `${basePath}/temp-resource-data.json`
+const tempConfigDataJsonPath = `${basePath}/temp-config-data.json`
 const outputCodeScriptPath = 'src/script/output-code.mjs'
 
 // 出码能力
@@ -74,7 +74,7 @@ router.post('/output', async (ctx) => {
   await fs.ensureDir(basePath)
 
   // 写入 json配置 文件
-  fs.writeJsonSync(tempResourceDataJsonPath, configData)
+  fs.writeJsonSync(tempConfigDataJsonPath, configData)
 
   const cmd = `${outputCodeScriptPath} --pageId ${pageId} --type ${type} --env ${
     IS_DEV ? 'dev' : 'prod'
