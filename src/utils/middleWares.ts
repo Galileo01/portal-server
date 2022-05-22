@@ -23,7 +23,7 @@ export const errMid = async (ctx: Koa.Context, next: Koa.Next) => {
   } catch (err) {
     const { status } = err as { status?: number } // koa-jwt token 验证错误 对象存在status=401
     logger.error(
-      `ERROR : ${JSON.stringify(err, Object.getOwnPropertyNames(err))},err`
+      `ERROR : ${JSON.stringify(err, Object.getOwnPropertyNames(err))}`
     )
     ctx.response.status = status || 500 // 状态码强制设置为 500
     ctx.body = {
