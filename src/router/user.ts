@@ -11,6 +11,8 @@ const router = new Router({
   prefix: '/user',
 })
 
+const userBaseColumns = ['userId', 'name', 'avatar', 'role']
+
 // 登陆 / 用户名不存在则自动 注册
 router.post('/login', async (ctx) => {
   let success = 0
@@ -63,8 +65,6 @@ router.post('/login', async (ctx) => {
     data,
   }
 })
-
-const userBaseColumns = ['userId', 'name', 'avatar']
 
 // 根据 token 获取用户信息
 router.get('/getInfo', async (ctx) => {

@@ -75,6 +75,7 @@ router.get('/getList', async (ctx) => {
 
     const neededColumns =
       resourceType === 'page' ? pageBaseColumns : templateBaseColumns
+
     const userResourceList = await knex
       .select(...neededColumns)
       .from<Resource>(resourceType)
@@ -159,6 +160,16 @@ router.post('/operate', async (ctx) => {
     if (affectedRow === 0) {
       data = 'resourceId 错误'
     }
+  }
+  // 若 操作成功 查找最新的 数据 并返回
+  if (success === 1) {
+    const resources = await knex
+      .select()
+      .from<Resource>(resourceType)
+      .where({ resourceId })
+
+    // eslint-disable-next-line prefer-destructuring
+    data = resources[0]
   }
 
   ctx.body = {
