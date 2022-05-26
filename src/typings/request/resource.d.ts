@@ -7,8 +7,8 @@ export type GetByIdQuery = {
 
 export type GetResourceListQuery = {
   resourceType?: ResourceType
-  limit?: number
-  offset?: number
+  limit?: string
+  offset?: string
   // template 过滤条件
   filter?: 'all' | 'private' | 'public' | 'platform'
   titleLike?: string

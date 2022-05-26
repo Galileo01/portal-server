@@ -11,7 +11,7 @@ import { UserInCtxState } from '@/typings/common/koa-context'
 import knex from '@/utils/kenx'
 import { verifyTokenFromAuthorization } from '@/utils/token'
 import logger from '@/utils/logger'
-import { isNumber } from '@/utils/assert'
+import { isValidStr } from '@/utils/assert'
 
 const router = new Router({
   prefix: '/resource',
@@ -55,7 +55,7 @@ router.get('/getList', async (ctx) => {
     order = 'lastModified',
   } = ctx.query as GetResourceListQuery
 
-  const existCountQuery = isNumber(offset) && isNumber(limit) // 存在分页条件
+  const existCountQuery = isValidStr(offset) && isValidStr(limit) // 存在分页条件
 
   // 是否包含 用户自己创建的
   const includesOwn =
@@ -122,16 +122,20 @@ router.get('/getList', async (ctx) => {
   // 统一排序
   allResourceList.sort((pre, cur) => (pre[order] < cur[order] ? -1 : 1))
 
-  const responseResourceList = existCountQuery
-    ? allResourceList.slice(offset, offset + limit + 1)
-    : allResourceList
+  const data = {
+    resourceList: allResourceList,
+    hasMore: false,
+  }
+  if (existCountQuery) {
+    const start = Number(offset)
+    const end = start + Number(limit)
+    data.resourceList = allResourceList.slice(Number(offset), end)
+    data.hasMore = end - 1 < allResourceList.length - 1 // 最后一个元素 是否是 all 里最后一个元素
+  }
 
   ctx.body = {
     success: 1,
-    data: {
-      resourceList: responseResourceList,
-      hasMore: allResourceList.length > responseResourceList.length ? 1 : 0,
-    },
+    data,
   }
 })
 
