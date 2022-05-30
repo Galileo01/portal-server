@@ -2,7 +2,7 @@ import Router from '@koa/router'
 import fs from 'fs-extra'
 import child_process from 'child_process'
 
-import { IS_DEV } from '@/constant/env'
+import { IS_DEV } from '@/constant'
 import { Resource, FontFamily } from '@/typings/database'
 import { CodeOutputData, NeededPageConfig } from '@/typings/request/code'
 import knex from '@/utils/kenx'
@@ -64,7 +64,7 @@ router.post('/output', async (ctx) => {
     // 替换 globalFont
     // @ts-ignore
     // eslint-disable-next-line prefer-destructuring
-    configData?.globalConfig?.fontConfig.globalFont = fontConfig.globalFont[1]
+    configData?.globalConfig?.fontConfig.globalFont = fontConfig.globalFont?.[1]
     // 替换 usedFont
     // @ts-ignore
     configData?.globalConfig?.fontConfig?.usedFont = usedFont
@@ -90,7 +90,7 @@ router.post('/output', async (ctx) => {
   ctx.body = {
     success: 1,
     data: {
-      zipName: `${pageId}.zip`,
+      zipName: `${pageId}_${type}.zip`,
       costTime,
     },
   }

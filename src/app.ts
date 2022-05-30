@@ -8,8 +8,7 @@ import cors from 'koa2-cors'
 
 import './moduleAlias' // 引入路径别名 模块 ，在自定义模块之间引入
 import './schedule'
-import { IS_DEV } from './constant/env'
-import { REMOTE_HOST } from './constant'
+import { IS_DEV, REMOTE_HOST } from './constant'
 import { requestLoggerMid, errMid } from './utils/middleWares'
 import { TOKEN_SECRET, JWT_IGNORE_PATH } from './config'
 import logger from './utils/logger'

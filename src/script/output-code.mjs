@@ -19,6 +19,12 @@ const { pageId, type = 'src_code', env = 'prod' } = global.argv
 
 const codeDir = `${baseDir}/${pageId}`
 
+const ZIPFileName = `${pageId}_${type}.zip`
+
+// 先确保 同名 文件和文件夹  被删除
+await fs.remove(codeDir)
+await fs.remove(`${baseDir}/${ZIPFileName}`)
+
 // 拉取 github 代码模板
 await $`git clone ${repositoryGitLink} ${codeDir}`
 
@@ -29,7 +35,7 @@ await $`cp ${resourceDataFile} ${codeDir}/src/${targetResourceDataFileName}`
 if (type === 'src_code') {
   // 压缩 文件夹
   cd(codeDir) // NOTE:进入该目录 压缩 才不会保存 目录结构
-  await $`zip -r ../${pageId}.zip *`
+  await $`zip -r ../${ZIPFileName} *`
 }
 // 打包模式  需要 npm i  & npm build
 else {
@@ -37,7 +43,7 @@ else {
   await $`npm i`
   await $`npm run build`
   cd('dist') // NOTE:进入该目录 压缩 才不会保存 目录结构
-  await $`zip -r ../../${pageId}.zip *`
+  await $`zip -r ../../${ZIPFileName} *`
 }
 
 // 切回 项目目录 进行后续删除操作

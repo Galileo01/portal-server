@@ -76,39 +76,39 @@ router.get('/getList', async (ctx) => {
     const neededColumns =
       resourceType === 'page' ? pageBaseColumns : templateBaseColumns
 
-    const userResourceList = await knex
-      .select(...neededColumns)
-      .from<Resource>(resourceType)
-      .where(condition)
+    const baseBuilder = knex.from<Resource>(resourceType).where(condition)
+
+    // titleLike 存在添加模糊查询
+    if (titleLike) {
+      baseBuilder.whereLike('title', `%${titleLike}%`)
+    }
+
+    const userResourceList = await baseBuilder.select(...neededColumns)
     allResourceList.push(...userResourceList)
     logger.debug('userResourceList', userResourceList.length)
   }
 
   // 若是 获取 模板 则需要 再获取 获取共享的 模板
-  if (resourceType === 'template') {
-    let condition: Record<string, unknown> | null = null
+  if (resourceType === 'template' && filter !== 'private') {
+    const condition =
+      filter === 'platform'
+        ? {
+            private: 0,
+            type: 'platform',
+          }
+        : { private: 0 }
 
-    if (filter === 'all') {
-      condition = { private: 0 }
-    } else if (filter === 'public') {
-      condition = { private: 0 }
-    } else if (filter === 'platform') {
-      condition = { type: 'platform' }
+    const baseBuilder = knex.from<Resource>('template').where(condition)
+
+    // titleLike 存在添加模糊查询
+    if (titleLike) {
+      baseBuilder.whereLike('title', `%${titleLike}%`)
     }
 
-    if (condition) {
-      const baseBuilder = knex.from<Resource>('template').where(condition)
+    const templates = await baseBuilder.select(...templateBaseColumns)
 
-      // titleLike 存在添加模糊查询
-      if (titleLike) {
-        baseBuilder.whereLike('title', `%${titleLike}%`)
-      }
-
-      const templates = await baseBuilder.select(...templateBaseColumns)
-
-      allResourceList.push(...templates)
-      logger.debug('filter templates', templates.length)
-    }
+    allResourceList.push(...templates)
+    logger.debug('filter templates', templates.length)
   }
 
   // 统一 过滤重复
