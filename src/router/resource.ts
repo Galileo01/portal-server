@@ -11,7 +11,7 @@ import { UserInCtxState } from '@/typings/common/koa-context'
 import knex from '@/utils/kenx'
 import { verifyTokenFromAuthorization } from '@/utils/token'
 import logger from '@/utils/logger'
-import { isNumber } from '@/utils/assert'
+import { isValidStr } from '@/utils/assert'
 
 const router = new Router({
   prefix: '/resource',
@@ -55,7 +55,7 @@ router.get('/getList', async (ctx) => {
     order = 'lastModified',
   } = ctx.query as GetResourceListQuery
 
-  const existCountQuery = isNumber(offset) && isNumber(limit) // 存在分页条件
+  const existCountQuery = isValidStr(offset) && isValidStr(limit) // 存在分页条件
 
   // 是否包含 用户自己创建的
   const includesOwn =
@@ -75,39 +75,40 @@ router.get('/getList', async (ctx) => {
 
     const neededColumns =
       resourceType === 'page' ? pageBaseColumns : templateBaseColumns
-    const userResourceList = await knex
-      .select(...neededColumns)
-      .from<Resource>(resourceType)
-      .where(condition)
+
+    const baseBuilder = knex.from<Resource>(resourceType).where(condition)
+
+    // titleLike 存在添加模糊查询
+    if (titleLike) {
+      baseBuilder.whereLike('title', `%${titleLike}%`)
+    }
+
+    const userResourceList = await baseBuilder.select(...neededColumns)
     allResourceList.push(...userResourceList)
     logger.debug('userResourceList', userResourceList.length)
   }
 
   // 若是 获取 模板 则需要 再获取 获取共享的 模板
-  if (resourceType === 'template') {
-    let condition: Record<string, unknown> | null = null
+  if (resourceType === 'template' && filter !== 'private') {
+    const condition =
+      filter === 'platform'
+        ? {
+            private: 0,
+            type: 'platform',
+          }
+        : { private: 0 }
 
-    if (filter === 'all') {
-      condition = { private: 0 }
-    } else if (filter === 'public') {
-      condition = { private: 0 }
-    } else if (filter === 'platform') {
-      condition = { type: 'platform' }
+    const baseBuilder = knex.from<Resource>('template').where(condition)
+
+    // titleLike 存在添加模糊查询
+    if (titleLike) {
+      baseBuilder.whereLike('title', `%${titleLike}%`)
     }
 
-    if (condition) {
-      const baseBuilder = knex.from<Resource>('template').where(condition)
+    const templates = await baseBuilder.select(...templateBaseColumns)
 
-      // titleLike 存在添加模糊查询
-      if (titleLike) {
-        baseBuilder.whereLike('title', `%${titleLike}%`)
-      }
-
-      const templates = await baseBuilder.select(...templateBaseColumns)
-
-      allResourceList.push(...templates)
-      logger.debug('filter templates', templates.length)
-    }
+    allResourceList.push(...templates)
+    logger.debug('filter templates', templates.length)
   }
 
   // 统一 过滤重复
@@ -121,16 +122,20 @@ router.get('/getList', async (ctx) => {
   // 统一排序
   allResourceList.sort((pre, cur) => (pre[order] < cur[order] ? -1 : 1))
 
-  const responseResourceList = existCountQuery
-    ? allResourceList.slice(offset, offset + limit + 1)
-    : allResourceList
+  const data = {
+    resourceList: allResourceList,
+    hasMore: false,
+  }
+  if (existCountQuery) {
+    const start = Number(offset)
+    const end = start + Number(limit)
+    data.resourceList = allResourceList.slice(Number(offset), end)
+    data.hasMore = end - 1 < allResourceList.length - 1 // 最后一个元素 是否是 all 里最后一个元素
+  }
 
   ctx.body = {
     success: 1,
-    data: {
-      resourceList: responseResourceList,
-      hasMore: allResourceList.length > responseResourceList.length ? 1 : 0,
-    },
+    data,
   }
 })
 
@@ -159,6 +164,16 @@ router.post('/operate', async (ctx) => {
     if (affectedRow === 0) {
       data = 'resourceId 错误'
     }
+  }
+  // 若 操作成功 查找最新的 数据 并返回
+  if (success === 1) {
+    const resources = await knex
+      .select()
+      .from<Resource>(resourceType)
+      .where({ resourceId })
+
+    // eslint-disable-next-line prefer-destructuring
+    data = resources[0]
   }
 
   ctx.body = {

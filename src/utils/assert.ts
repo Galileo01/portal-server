@@ -1,4 +1,4 @@
-export function isNumber(value: number | undefined): value is number {
+export function isValidStr(value: string | undefined): value is string {
   return value !== undefined
 }
-export default isNumber
+export default isValidStr
